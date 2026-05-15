@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: neurise-project-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: neurise
+      POSTGRES_USER: neurise
+      POSTGRES_PASSWORD: neurise_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - neurise_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neurise -d neurise"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  neurise_postgres_data:

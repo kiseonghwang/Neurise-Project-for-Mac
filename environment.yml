@@ -1,0 +1,16 @@
+name: NeuriseProject
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - fastapi
+      - uvicorn[standard]
+      - python-multipart
+      - psycopg[binary]
+      - pydantic
+      - numpy
+      - opencv-python
+      - ultralytics

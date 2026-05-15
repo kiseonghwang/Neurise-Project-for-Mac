@@ -1,0 +1,41 @@
+# macOS
+.DS_Store
+
+# Xcode user/local state
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.moved-aside
+*.xcscmblueprint
+
+# Swift build output
+.build/
+
+# Python
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+env/
+
+# IDEs
+.idea/
+.vscode/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Legacy local model artifacts
+Neurise_Project_app/knn_model.joblib
+Neurise_Project_app/predict_pose.py
+Neurise_Project_app/preprocessing.py
+
+# Docker/local DB data, if ever mounted into the repo
+postgres_data/
+pgdata/
