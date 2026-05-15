@@ -27,6 +27,7 @@ Neurise Project for Mac is a macOS SwiftUI app with a FastAPI backend for real-t
 │   │   └── Views
 │   ├── main.py
 │   ├── auth_db.py
+│   ├── pose_service.py
 │   ├── draw_landmark.py
 │   ├── pose_estimation.py
 │   ├── yolo26n-pose.pt
