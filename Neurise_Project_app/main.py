@@ -1,25 +1,15 @@
-import base64
 import logging
-import os
 
 from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import numpy as np
-import cv2
 import auth_db
-import draw_landmark
-
-try:
-    import pose_estimation
-except ModuleNotFoundError:
-    pose_estimation = None
+import pose_service
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
-POSE_DEVICE = os.getenv("POSE_DEVICE", "cpu")
 
 # CORS 허용
 app.add_middleware(
@@ -213,78 +203,11 @@ async def upload_image(
     user_id: Optional[str] = Form(default=None),
     mode: str = Form(default="monitoring"),
 ):
-
-    # 이미지 읽기
     contents = await file.read()
 
-    # numpy array 변환
-    np_array = np.frombuffer(contents, np.uint8)
-
-    # OpenCV 이미지 디코딩
-    image = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-
-    if image is None:
-        raise HTTPException(status_code=400, detail="Invalid image file")
-
-    # 이미지 크기 출력
-    height, width, _ = image.shape
-
-    # print(f"Received image: {width}x{height}")
-
     try:
-        if pose_estimation is None:
-            keypoints = np.empty((0, 2))
-            message = "Pose model module is not installed"
-        else:
-            keypoints = pose_estimation.predict(image, device=POSE_DEVICE)
-            message = "Landmark image created"
-    except IndexError:
-        keypoints = np.empty((0, 2))
-        message = "No pose detected"
-
-    annotated_image = draw_landmark.draw_landmarks(image, keypoints)
-
-    success, encoded_image = cv2.imencode(".jpg", annotated_image)
-
-    if mode == "calibration":
-        try:
-            auth_db.record_calibration_sample(user_id, keypoints)
-        except auth_db.DatabaseUnavailableError as error:
-            logger.warning("Failed to record calibration sample: %s", error)
-        result = "calibrating"
-        is_bad_posture = False
-    else:
-        try:
-            is_bad_posture, difference = auth_db.predict_bad_posture(user_id, keypoints)
-        except auth_db.DatabaseUnavailableError as error:
-            logger.warning("Failed to predict posture from baseline: %s", error)
-            is_bad_posture = False
-            difference = None
-        result = "1" if is_bad_posture else "0"
-
-    if is_bad_posture:
-        print("result: 안 좋은 자세")
-    else:
-        print("result: 좋은 자세" if result != "calibrating" else "result: 기준 자세 수집 중")
-
-    if mode != "calibration":
-        try:
-            auth_db.record_pose_sample(user_id, is_good=not is_bad_posture)
-        except auth_db.DatabaseUnavailableError as error:
-            logger.warning("Failed to record pose sample: %s", error)
-
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to encode landmark image")
-
-    landmark_image = base64.b64encode(encoded_image).decode("utf-8")
-
-    # print(keypoints)
-    print("-------------------------")
-
-    return {
-        "message": message,
-        "width": width,
-        "height": height,
-        "result": result,
-        "landmarkImage": f"data:image/jpeg;base64,{landmark_image}",
-    }
+        return pose_service.process_uploaded_frame(contents, user_id, mode)
+    except pose_service.InvalidImageError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except pose_service.LandmarkEncodingError as error:
+        raise HTTPException(status_code=500, detail=str(error))
